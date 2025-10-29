@@ -67,12 +67,34 @@ func (l *Library) BorrowBook(bookID int, memberID int) error {
 func (l *Library) ReturnBook(bookID int, memberID int) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+
 	book, ok := l.books[bookID]
 	if !ok {
 		return errors.New("book not found")
 	}
+
 	member, ok := l.members[memberID]
 	if !ok {
 		return errors.New("member not found")
 	}
+
+	found := false
+	idx := -1
+	for i, b := range member.BorrowedBooks {
+		if b.ID == bookID {
+			found = true
+			idx = i
+			break
+		}
+	}
+
+	if !found {
+		return errors.New("member did not borrow this book")
+	}
+
+	member.BorrowedBooks = append(member.BorrowedBooks[:idx], member.BorrowedBooks[idx+1:]...)
+
+	book.Status = "Available"
+	l.books[bookID] = book
+	return nil
 }
