@@ -13,14 +13,12 @@ var (
 	ErrMemberNotFound   = errors.New("member not found")
 )
 
-// Public interface for external use
 type LibraryManager interface {
 	ReserveBook(bookID, memberID int) error
 	GetBooks() []models.Book
 	GetMembers() []models.Member
 }
 
-// Public interface used by the worker pool (must be exported)
 type ReservationHandler interface {
 	TryReserve(bookID, memberID int) error
 	CancelReservation(bookID int)
@@ -30,7 +28,7 @@ type LibraryService struct {
 	books      map[int]*models.Book
 	members    map[int]*models.Member
 	mu         sync.RWMutex
-	workerPool *concurrency.ReservationWorkerPool
+	WorkerPool *concurrency.ReservationWorkerPool // ← EXPORTED (capital W)
 }
 
 func NewLibraryService() *LibraryService {
@@ -51,14 +49,12 @@ func NewLibraryService() *LibraryService {
 		members: members,
 	}
 
-	// Pass *ls* — it implements ReservationHandler
-	ls.workerPool = concurrency.NewReservationWorkerPool(ls)
-	ls.workerPool.Start()
+	ls.WorkerPool = concurrency.NewReservationWorkerPool(ls)
+	ls.WorkerPool.Start()
 
 	return ls
 }
 
-// ReserveBook — called by controller
 func (ls *LibraryService) ReserveBook(bookID, memberID int) error {
 	ls.mu.RLock()
 	book, bookExists := ls.books[bookID]
@@ -80,7 +76,7 @@ func (ls *LibraryService) ReserveBook(bookID, memberID int) error {
 		Response: make(chan error, 1),
 	}
 
-	ls.workerPool.Requests <- req
+	ls.WorkerPool.Requests <- req
 	return <-req.Response
 }
 
@@ -104,7 +100,7 @@ func (ls *LibraryService) GetMembers() []models.Member {
 	return list
 }
 
-// TryReserve — called by worker (exported)
+// Exported: TryReserve
 func (ls *LibraryService) TryReserve(bookID, memberID int) error {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
@@ -122,7 +118,7 @@ func (ls *LibraryService) TryReserve(bookID, memberID int) error {
 	return nil
 }
 
-// CancelReservation — called by timer (exported)
+// Exported: CancelReservation
 func (ls *LibraryService) CancelReservation(bookID int) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()

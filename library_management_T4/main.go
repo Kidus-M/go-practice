@@ -3,6 +3,8 @@ package main
 import (
 	"library_management_T4/controllers"
 	"library_management_T4/services"
+	"log"
+	"time"
 )
 
 func main() {
@@ -15,6 +17,13 @@ func main() {
 	// Simulate concurrent reservations
 	controller.SimulateConcurrentReservations()
 
-	// Keep main alive
-	select {}
+	// Let final logs print
+	time.Sleep(1 * time.Second)
+
+	// Gracefully stop worker pool
+	if service.WorkerPool != nil {
+		service.WorkerPool.Stop()
+	}
+
+	log.Println("Simulation complete. Shutting down.")
 }
