@@ -28,7 +28,7 @@ type LibraryService struct {
 	books      map[int]*models.Book
 	members    map[int]*models.Member
 	mu         sync.RWMutex
-	WorkerPool *concurrency.ReservationWorkerPool // ← EXPORTED (capital W)
+	WorkerPool *concurrency.ReservationWorkerPool
 }
 
 func NewLibraryService() *LibraryService {
@@ -100,7 +100,6 @@ func (ls *LibraryService) GetMembers() []models.Member {
 	return list
 }
 
-// Exported: TryReserve
 func (ls *LibraryService) TryReserve(bookID, memberID int) error {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
@@ -118,7 +117,6 @@ func (ls *LibraryService) TryReserve(bookID, memberID int) error {
 	return nil
 }
 
-// Exported: CancelReservation
 func (ls *LibraryService) CancelReservation(bookID int) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
