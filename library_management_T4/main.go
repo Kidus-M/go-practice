@@ -1,12 +1,20 @@
 package main
 
 import (
-	"library_management/controllers"
-	"library_management/services"
+	"library_management_T4/controllers"
+	"library_management_T4/services"
 )
 
 func main() {
-	lib := services.NewLibrary()
-	ctrl := controllers.NewController(lib)
-	ctrl.Run()
+	service := services.NewLibraryService()
+	controller := controllers.NewLibraryController(service)
+
+	// Initial state
+	controller.ListBooks()
+
+	// Simulate concurrent reservations
+	controller.SimulateConcurrentReservations()
+
+	// Keep main alive
+	select {}
 }

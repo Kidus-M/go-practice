@@ -1,149 +1,58 @@
 package controllers
 
 import (
-	"bufio"
 	"fmt"
-	"os"
-	"strconv"
-	"strings"
-
-	"library_management/models"
-	"library_management/services"
+	"library_management_T4/services"
+	"time"
 )
 
-type Controller struct {
-	lib     services.LibraryManager
-	scanner *bufio.Scanner
+type LibraryController struct {
+	service services.LibraryManager
 }
 
-func NewController(lib services.LibraryManager) *Controller {
-	return &Controller{
-		lib:     lib,
-		scanner: bufio.NewScanner(os.Stdin),
-	}
+func NewLibraryController(service services.LibraryManager) *LibraryController {
+	return &LibraryController{service: service}
 }
 
-func (c *Controller) Run() {
-	c.seedData()
-
-	for {
-		c.printMenu()
-		choice := c.readInt("Enter choice: ")
-		switch choice {
-		case 1:
-			c.addBook()
-		case 2:
-			c.removeBook()
-		case 3:
-			c.borrowBook()
-		case 4:
-			c.returnBook()
-		case 5:
-			c.listAvailable()
-		case 6:
-			c.listBorrowed()
-		case 7:
-			fmt.Println("Exiting...")
-			return
-		default:
-			fmt.Println("Invalid choice")
-		}
-	}
-}
-
-func (c *Controller) seedData() {
-	c.lib.AddBook(models.Book{ID: 1, Title: "Go Lang", Author: "Alan"})
-	c.lib.AddBook(models.Book{ID: 2, Title: "Clean Code", Author: "Uncle Bob"})
-	c.lib.(*services.Library).AddMember(models.Member{ID: 101, Name: "Alice"})
-	c.lib.(*services.Library).AddMember(models.Member{ID: 102, Name: "Bob"})
-}
-
-func (c *Controller) printMenu() {
-	fmt.Println("\n=== Library System ===")
-	fmt.Println("1. Add Book")
-	fmt.Println("2. Remove Book")
-	fmt.Println("3. Borrow Book")
-	fmt.Println("4. Return Book")
-	fmt.Println("5. List Available")
-	fmt.Println("6. List Borrowed by Member")
-	fmt.Println("7. Exit")
-}
-
-func (c *Controller) addBook() {
-	id := c.readInt("Book ID: ")
-	title := c.readString("Title: ")
-	author := c.readString("Author: ")
-	c.lib.AddBook(models.Book{ID: id, Title: title, Author: author})
-	fmt.Println("Book added.")
-}
-
-func (c *Controller) removeBook() {
-	id := c.readInt("Book ID to remove: ")
-	c.lib.RemoveBook(id)
-	fmt.Println("Book removed if existed.")
-}
-
-func (c *Controller) borrowBook() {
-	bookID := c.readInt("Book ID: ")
-	memberID := c.readInt("Member ID: ")
-	if err := c.lib.BorrowBook(bookID, memberID); err != nil {
-		fmt.Println("Error:", err)
+func (c *LibraryController) ReserveBook(bookID, memberID int) {
+	fmt.Printf("[REQUEST] Member %d trying to reserve Book %d...\n", memberID, bookID)
+	err := c.service.ReserveBook(bookID, memberID)
+	if err != nil {
+		fmt.Printf("[FAILED] Member %d: %v\n", memberID, err)
 	} else {
-		fmt.Println("Borrowed!")
+		fmt.Printf("[SUCCESS] Member %d reserved Book %d\n", memberID, bookID)
 	}
 }
 
-func (c *Controller) returnBook() {
-	bookID := c.readInt("Book ID: ")
-	memberID := c.readInt("Member ID: ")
-	if err := c.lib.ReturnBook(bookID, memberID); err != nil {
-		fmt.Println("Error:", err)
-	} else {
-		fmt.Println("Returned!")
-	}
-}
-
-func (c *Controller) listAvailable() {
-	books := c.lib.ListAvailableBooks()
-	fmt.Println("\n--- Available ---")
+func (c *LibraryController) ListBooks() {
+	books := c.service.GetBooks()
+	fmt.Println("\n--- Current Books ---")
 	for _, b := range books {
-		fmt.Printf("%d | %s by %s\n", b.ID, b.Title, b.Author)
-	}
-	if len(books) == 0 {
-		fmt.Println("None")
-	}
-}
-
-func (c *Controller) listBorrowed() {
-	id := c.readInt("Member ID: ")
-	books := c.lib.ListBorrowedBooks(id)
-	m, _ := c.lib.(*services.Library).GetMember(id)
-	name := "Unknown"
-	if m.ID != 0 {
-		name = m.Name
-	}
-	fmt.Printf("\n--- Borrowed by %s (%d) ---\n", name, id)
-	for _, b := range books {
-		fmt.Printf("%d | %s by %s\n", b.ID, b.Title, b.Author)
-	}
-	if len(books) == 0 {
-		fmt.Println("None")
-	}
-}
-
-// Input helpers
-func (c *Controller) readString(prompt string) string {
-	fmt.Print(prompt)
-	c.scanner.Scan()
-	return strings.TrimSpace(c.scanner.Text())
-}
-
-func (c *Controller) readInt(prompt string) int {
-	for {
-		s := c.readString(prompt)
-		if n, err := strconv.Atoi(s); err == nil {
-			return n
+		status := "Available"
+		if !b.Available {
+			status = fmt.Sprintf("Reserved by Member %d", b.ReservedBy)
 		}
-		fmt.Println("Invalid number, try again.")
+		fmt.Printf("ID: %d | %s | %s\n", b.ID, b.Title, status)
 	}
+	fmt.Println()
+}
+
+func (c *LibraryController) SimulateConcurrentReservations() {
+	fmt.Println("Simulating concurrent reservation attempts...\n")
+	time.Sleep(100 * time.Millisecond)
+
+	// Simulate 10 members trying to reserve the same book
+	for i := 0; i < 10; i++ {
+		memberID := 101 + (i % 3) // cycle through Alice, Bob, Charlie
+		go c.ReserveBook(1, memberID)
+	}
+
+	// Wait a bit
+	time.Sleep(2 * time.Second)
+	c.ListBooks()
+
+	// Wait for timeout
+	fmt.Println("Waiting for auto-cancellation (5 seconds)...")
+	time.Sleep(6 * time.Second)
+	c.ListBooks()
 }
