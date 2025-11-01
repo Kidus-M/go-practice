@@ -17,5 +17,5 @@ This is a simple console-based library management system implemented in Go.
 
 ## Usage
 
-
+This needs edit to change the docs 
 Run `go run ./...` then follow the console menu to add books, add members, borrow, return, and list books.
